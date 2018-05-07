@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">微仓管理</string>
+    <string name="msgbox_show_hint">提示</string>
+
+    <!--<string name="loadurl">http://tmanage.jt.yingjiayun.com/jtms/</string>-->
+    <!--<string name="loadurl">http://192.168.0.16:8083/jtms/</string>-->
+    <string name="loadurl">http://192.168.0.16:807</string>
+    <!--<string name="loadurl">http://192.168.0.16:801/index.aspx</string>-->
+    <string name="authorities">fileprovider</string>
+</resources>
