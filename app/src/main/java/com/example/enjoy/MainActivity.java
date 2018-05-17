@@ -189,7 +189,7 @@ public class MainActivity extends BaseActivity implements IBrushCardEvent {
         jsCall = new JsCallInterface(MainActivity.this,mWebView);
         WebSettings webSettings = mWebView.getSettings();
         mWebView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
-        //webSettings.setSupportZoom(true);
+        webSettings.setSupportZoom(false);
         webSettings.setBuiltInZoomControls(true);
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
