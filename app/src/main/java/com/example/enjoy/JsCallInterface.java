@@ -1,28 +1,42 @@
 package com.example.enjoy;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Message;
+import android.view.ContextThemeWrapper;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
 import BaseActivity.BaseActivity;
 
+import com.example.updateapp.IDownProgress;
 import com.example.updateapp.UpdateManager;
 import com.uuzuche.lib_zxing.activity.CaptureActivity;
 
 import android.Manifest;
+import android.widget.ProgressBar;
+
+import org.json.JSONObject;
 
 import java.util.List;
 
 import Entity.RequestPermissionsResult;
+import Enums.MsgType;
+import Factory.Factory;
 import Helper.App;
 import Helper.EnjoyTools;
 import Helper.Msgbox;
 import Interface.IAsynCallBackListener;
 import Interface.ICard;
+import Listener.IAsynListener;
+import NetComm.CommProtocol;
+import NetComm.INetComm;
 
 
 /**
@@ -30,15 +44,15 @@ import Interface.ICard;
  */
 
 
-public class JsCallInterface  {
+public class JsCallInterface extends ContextWrapper {
     public String mCallJsName="";
-    private  Context    mContext;
     public static  int webViewCount=0;
     private Handler mHandler = new Handler();
     private WebView mwebview;
     public boolean MultiModel=false;
     public int ReLoadWeb=0;
     public ICard card;
+    private INetComm commProtocol = Factory.GetInstance(CommProtocol.class, null);
 
 
     /**
@@ -70,9 +84,8 @@ public class JsCallInterface  {
 
     public JsCallInterface(Context ctx,WebView view)
     {
-        mContext=ctx;
+        super(ctx);
         mwebview=view;
-
     }
 
     /**
@@ -82,7 +95,7 @@ public class JsCallInterface  {
      */
     public int getVersionCode()
     {
-        return App.getVersionCode(mContext);
+        return App.getVersionCode(this.getBaseContext());
     }
 
     @JavascriptInterface
@@ -91,7 +104,7 @@ public class JsCallInterface  {
         try {
             Intent intent = new Intent();
             intent.setAction("android.intent.action.MY_RECEIVER");
-            ((Activity)mContext).sendBroadcast(intent);
+            ((Activity)this.getBaseContext()).sendBroadcast(intent);
         }
         catch (Exception e)
         {
@@ -103,9 +116,9 @@ public class JsCallInterface  {
     public void Close()
     {
         try {
-            ((Activity)mContext).setResult(ReLoadWeb);
-            ((Activity)mContext).finish();
-            ((Activity)mContext).overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+            ((Activity)this.getBaseContext()).setResult(ReLoadWeb);
+            ((Activity)this.getBaseContext()).finish();
+            ((Activity)this.getBaseContext()).overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
             MainActivity.urlList.remove(MainActivity.urlList.indexOf(mwebview.getUrl()));
             webViewCount-=1;
         }
@@ -117,7 +130,7 @@ public class JsCallInterface  {
     @JavascriptInterface
     public String GetAppVer()
     {
-        return App.getVersionName(mContext);
+        return App.getVersionName(this.getBaseContext());
     }
 
     @JavascriptInterface
@@ -141,8 +154,8 @@ public class JsCallInterface  {
     public void CallActivity(String Aname) {
         try {
             Class a = Class.forName(Aname);
-            Intent intent = new Intent(mContext, a);
-            mContext.startActivity(intent);
+            Intent intent = new Intent(this.getBaseContext(), a);
+            this.getBaseContext().startActivity(intent);
         }
         catch (Exception e)
         {
@@ -156,8 +169,8 @@ public class JsCallInterface  {
     @JavascriptInterface
     public void ScanQrcode(final String CallJs)
     {
-        if (!((BaseActivity)mContext).CheckPermission(Manifest.permission.CAMERA)) {
-            ((BaseActivity) mContext).RequestPermission(Manifest.permission.CAMERA, new IAsynCallBackListener() {
+        if (!((BaseActivity)this.getBaseContext()).CheckPermission(Manifest.permission.CAMERA)) {
+            ((BaseActivity) this.getBaseContext()).RequestPermission(Manifest.permission.CAMERA, new IAsynCallBackListener() {
                 @Override
                 public void onFinish(Object sender) {
                     List<RequestPermissionsResult> list=(List<RequestPermissionsResult>)sender;
@@ -165,8 +178,8 @@ public class JsCallInterface  {
                         if (permiss.getPermissionsName().equalsIgnoreCase("android.permission.CAMERA")
                                 && permiss.getRequestRes()==0) {
                             mCallJsName = CallJs;
-                            Intent intent = new Intent(mContext, CaptureActivity.class);
-                            ((Activity) mContext).startActivityForResult(intent, 111);
+                            Intent intent = new Intent(JsCallInterface.this.getBaseContext(), CaptureActivity.class);
+                            ((Activity) JsCallInterface.this.getBaseContext()).startActivityForResult(intent, 111);
                         }
                     }
                 }
@@ -179,8 +192,8 @@ public class JsCallInterface  {
         }
         else {
             mCallJsName = CallJs;
-            Intent intent = new Intent(mContext, CaptureActivity.class);
-            ((Activity) mContext).startActivityForResult(intent, 111);
+            Intent intent = new Intent(this.getBaseContext(), CaptureActivity.class);
+            ((Activity) this.getBaseContext()).startActivityForResult(intent, 111);
         }
     }
 
@@ -194,13 +207,147 @@ public class JsCallInterface  {
         MultiModel=model;
     }
 
+    /**
+     * 检查软件升级
+     */
+    public void UpdateVerify(String appName, Integer appVer, final IAsynListener callback){
+        String url ="http://up.yingjiayun.com/AppUpdate/UpdateVerify?appName="+appName+"&CurrentVer="+appVer;
+        try {
+            commProtocol.Get(url, new IAsynListener() {
+                @Override
+                public void onFinish(Object sender, Object data) {
+                    try {
+                        String ResStr = data.toString();
+                        JSONObject jsonObject = new JSONObject(ResStr);
+                        callback.onFinish(sender,jsonObject);
+                    }catch (Exception e){
+                        e.printStackTrace();
+                        callback.onError(sender,e);
+                    }
+                }
+
+                @Override
+                public void onError(Object sender, Exception e) {
+                    callback.onError(sender,e);
+                }
+            });
+        }catch (Exception e){
+            callback.onError(this, e);
+        }
+    }
+
+    public void UpdateVerify(){
+        String appName = App.getAppName(this.getBaseContext());
+        int versionCode = App.getVersionCode(this.getBaseContext());
+        UpdateVerify(appName, versionCode, new IAsynListener() {
+            @Override
+            public void onFinish(Object sender, Object data) {
+                final JSONObject jsonObject = (JSONObject) data;
+                Message msg = new Message();
+                msg.obj = new IAsynListener() {
+                    @Override
+                    public void onFinish(Object sender, Object data) {
+                        try {
+                            if(jsonObject.getInt("Result")==0){
+//                                final AlertDialog dialog=Msgbox.ShowDialog(getBaseContext(), R.layout.update_dialog);
+//                                dialog.findViewById(R.id.btn_update).setOnClickListener(new View.OnClickListener() {
+//                                    @Override
+//                                    public void onClick(View v) {
+//                                        dialog.dismiss();
+//                                        final AlertDialog dialog = Msgbox.ShowDialog(getBaseContext(), R.layout.progressdialog_view);
+//                                        Message msg = new Message();
+//                                        msg.arg1=1;
+//                                        msg.obj = new IAsynListener() {
+//                                            @Override
+//                                            public void onFinish(Object sender, Object data) {
+//                                                try {
+//                                                    UpdateManager.DownFile(getBaseContext(), jsonObject.getJSONObject("JsonData").getString("DownUrl"),
+//                                                            true, new IDownProgress() {
+//                                                                @Override
+//                                                                public void DownProgress(int fileSize, int downLoad, String localFileName) {
+//                                                                    ProgressBar progressBar = dialog.findViewById(R.id.update_progress);
+//                                                                    progressBar.setMax(fileSize);
+//                                                                    progressBar.setProgress(downLoad);
+//                                                                    filename = localFileName;
+//                                                                    if(downLoad >= fileSize){
+//                                                                        dialog.dismiss();
+//                                                                    }
+//                                                                }
+//                                                            });
+//                                                    view.setEnabled(true);
+//                                                }catch (Exception e){
+//
+//                                                }
+//                                            }
+//
+//                                            @Override
+//                                            public void onError(Object sender, Exception e) {
+//
+//                                            }
+//                                        };
+//                                        dialog.setCanceledOnTouchOutside(false);
+//                                        dialog.setCancelable(false);
+//                                        mHandler.sendMessage(msg);
+//                                        dialog.findViewById(R.id.btn_cancel).setOnClickListener(new View.OnClickListener() {
+//                                            @Override
+//                                            public void onClick(View v) {
+//                                                UpdateManager.DownCancel(filename);
+//                                                dialog.dismiss();
+//                                                view.setEnabled(true);
+//                                            }
+//                                        });
+//                                    }
+//                                });
+//                                dialog.setCanceledOnTouchOutside(false);
+//                                dialog.setCancelable(false);
+//                                dialog.findViewById(R.id.btn_cancel).setOnClickListener(new View.OnClickListener() {
+//                                    @Override
+//                                    public void onClick(View v) {
+//                                        dialog.dismiss();
+//                                        view.setEnabled(true);
+//                                    }
+//                                });
+                            }else {
+//                                Msgbox.Show(getBaseContext(), "已是最新版本，不用升级。",
+//                                        MsgType.msg_Hint, new IAsynListener() {
+//                                            @Override
+//                                            public void onFinish(Object sender, Object data) {
+//                                                view.setEnabled(true);
+//                                            }
+//
+//                                            @Override
+//                                            public void onError(Object sender, Exception e) {
+//
+//                                            }
+//                                        });
+                            }
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public void onError(Object sender, Exception e) {
+
+                    }
+                };
+                mHandler.sendMessage(msg);
+            }
+
+            @Override
+            public void onError(Object sender, Exception e) {
+
+            }
+        });
+    }
+
     @JavascriptInterface
      public void UpdateApp(final String url, final String des)
     {
         try {
-            if (!((BaseActivity)mContext).CheckPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE))
+            if (!((BaseActivity)this.getBaseContext()).CheckPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE))
             {
-                ((BaseActivity)mContext).RequestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, new IAsynCallBackListener() {
+                ((BaseActivity)this.getBaseContext()).RequestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, new IAsynCallBackListener() {
                     @Override
                     public void onFinish(Object sender) {
                         List<RequestPermissionsResult> list = (List<RequestPermissionsResult>) sender;
@@ -209,8 +356,12 @@ public class JsCallInterface  {
                                     && permiss.getRequestRes() == 0) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                                     // 检查软件更新
-                                    UpdateManager manager = new UpdateManager(mContext);
-                                    manager.DownApp(url, des);
+                                    UpdateManager.DownFile(JsCallInterface.this.getBaseContext(), url, true, new IDownProgress() {
+                                        @Override
+                                        public void DownProgress(int i, int i1, String s) {
+
+                                        }
+                                    });
                                 }
                             }
                         }
@@ -225,13 +376,17 @@ public class JsCallInterface  {
             else
             {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    UpdateManager manager = new UpdateManager(mContext);
-                    manager.DownApp(url, des);
+                    UpdateManager.DownFile(JsCallInterface.this.getBaseContext(), url, true, new IDownProgress() {
+                        @Override
+                        public void DownProgress(int i, int i1, String s) {
+
+                        }
+                    });
                 }
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-                if (!((BaseActivity) mContext).CheckPermission(Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS)) {
-                    ((BaseActivity) mContext).RequestPermission(Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS, new IAsynCallBackListener() {
+                if (!((BaseActivity) this.getBaseContext()).CheckPermission(Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS)) {
+                    ((BaseActivity) this.getBaseContext()).RequestPermission(Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS, new IAsynCallBackListener() {
 
                         @Override
                         public void onFinish(Object sender) {
@@ -240,8 +395,12 @@ public class JsCallInterface  {
                                 if (permiss.getPermissionsName().equalsIgnoreCase("android.permission.MOUNT_UNMOUNT_FILESYSTEMS")
                                         && permiss.getRequestRes() == 0) {
                                     // 检查软件更新
-                                    UpdateManager manager = new UpdateManager(mContext);
-                                    manager.DownApp(url, des);
+                                    UpdateManager.DownFile(JsCallInterface.this.getBaseContext(), url, true, new IDownProgress() {
+                                        @Override
+                                        public void DownProgress(int i, int i1, String s) {
+
+                                        }
+                                    });
                                 }
                             }
                         }
@@ -253,8 +412,12 @@ public class JsCallInterface  {
                     });
                 } else {
                     // 检查软件更新
-                    UpdateManager manager = new UpdateManager(mContext);
-                    manager.DownApp(url, des);
+                    UpdateManager.DownFile(JsCallInterface.this.getBaseContext(), url, true, new IDownProgress() {
+                        @Override
+                        public void DownProgress(int i, int i1, String s) {
+
+                        }
+                    });
                 }
             }
         }
@@ -275,11 +438,11 @@ public class JsCallInterface  {
         try {
             if (card==null)
             {
-                Msgbox.Show(mContext,"请重新刷卡！");
+                Msgbox.Show(this.getBaseContext(),"请重新刷卡！");
                 return 1;
             }
             if (!card.ExistsCard()) {
-                Msgbox.Show(mContext, "请贴卡后再操作");
+                Msgbox.Show(this.getBaseContext(), "请贴卡后再操作");
                 return 1;
             }
             byte[] key= EnjoyTools.HexStrToBytes(KeyStr);
@@ -292,7 +455,7 @@ public class JsCallInterface  {
                 return 3;
             }
         } catch (Exception E) {
-            Msgbox.Show(mContext,  E.getMessage());
+            Msgbox.Show(this.getBaseContext(),  E.getMessage());
         }
         return 1;
     }
@@ -301,18 +464,18 @@ public class JsCallInterface  {
         String str = "";
         if (card==null)
         {
-            Msgbox.Show(mContext, "请重新刷卡！");
+            Msgbox.Show(this.getBaseContext(), "请重新刷卡！");
             return false;
         }
         try {
             if (!card.ExistsCard()) {
-                Msgbox.Show(mContext,  "请贴卡后再操作");
+                Msgbox.Show(this.getBaseContext(),  "请贴卡后再操作");
                 return false;
             }
             byte[] key= EnjoyTools.HexStrToBytes(KeyStr);
             return card.AuthentWruteKey(SectorNo,key);
         } catch (Exception E) {
-            Msgbox.Show(mContext, E.getMessage());
+            Msgbox.Show(this.getBaseContext(), E.getMessage());
         }
         return false;
     }
@@ -321,7 +484,7 @@ public class JsCallInterface  {
     public String ReadSector(int SectorNo,String KeyStr) throws Exception {
         if (card==null)
         {
-            Msgbox.Show(mContext, "请重新刷卡！");
+            Msgbox.Show(this.getBaseContext(), "请重新刷卡！");
             return "";
         }
         byte[] key= EnjoyTools.HexStrToBytes(KeyStr);
@@ -333,11 +496,11 @@ public class JsCallInterface  {
     public String ReadBlock(int BlockNo,String KeyStr) throws Exception {
         if (card==null)
         {
-            Msgbox.Show(mContext, "请重新刷卡！");
+            Msgbox.Show(this.getBaseContext(), "请重新刷卡！");
             return "";
         }
         if (!card.ExistsCard()) {
-            Msgbox.Show(mContext,  "请贴卡后再操作");
+            Msgbox.Show(this.getBaseContext(),  "请贴卡后再操作");
             return "";
         }
         byte[] key= EnjoyTools.HexStrToBytes(KeyStr);

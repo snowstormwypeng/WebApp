@@ -3,16 +3,23 @@ package Helper;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.drawable.BitmapDrawable;
+import android.os.Build;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 
 import com.example.enjoy.R;
 
@@ -21,13 +28,15 @@ import java.util.List;
 
 import Device.PhoneSound;
 import Enums.MsgType;
-import Interface.IAsynCallBackListener;
+import Listener.IAsynListener;
+
 
 /**
  * 弹出框
  * Created by 王彦鹏 on 2017-09-04.
  */
 public class Msgbox {
+    private static AlertDialog.Builder tipDialog;
 
     private static class CustomAdapter extends BaseAdapter {
 
@@ -97,7 +106,7 @@ public class Msgbox {
     }
 
     public static boolean JSPrompt(Context ctx, String message,
-                              String defaultValue, final JsPromptResult result) {
+                                   String defaultValue, final JsPromptResult result) {
         final AlertDialog.Builder builder = new AlertDialog.Builder(ctx);
         builder.setIcon(R.mipmap.ic_launcher);
         builder.setTitle("对话框").setMessage(message);
@@ -184,17 +193,19 @@ public class Msgbox {
         //result.confirm();
         return true;
     }
-    public static boolean Show(final Context ctx, String title, String message,
-                               MsgType msgType, final IAsynCallBackListener callback) {
+    public static void Show(final Context ctx, String title, String message,
+                            MsgType msgType, final IAsynListener OKcallback,
+                            final IAsynListener Cancelcallback) {
 
-        final AlertDialog.Builder msgDialog = new AlertDialog.Builder(ctx);
-        msgDialog.setIcon(R.mipmap.ic_launcher);
-        msgDialog.setTitle(title);
-        msgDialog.setPositiveButton(android.R.string.ok, new AlertDialog.OnClickListener() {
+        CloseTipDialog();
+        tipDialog = new AlertDialog.Builder(ctx);
+        tipDialog.setIcon(R.mipmap.ic_launcher);
+        tipDialog.setTitle(title);
+        tipDialog.setPositiveButton(android.R.string.ok, new AlertDialog.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                if (callback!=null) {
-                    callback.onFinish(this);
+                if (OKcallback!=null) {
+                    OKcallback.onFinish(tipDialog,"");
                 }
             }
         });
@@ -210,7 +221,7 @@ public class Msgbox {
             }
             case msg_Succeed:
             {
-                PhoneSound.play(ctx,R.raw.hint_8);
+                PhoneSound.play(ctx,R.raw.hint_1);
                 items.add(new ItemBean(R.drawable.icon_success,message));
                 break;
             }
@@ -221,13 +232,13 @@ public class Msgbox {
                 final EditText et = new EditText(ctx);
                 et.setSingleLine();
                 et.setText(message);
-                msgDialog.setView(et);
-                msgDialog.setView(et);
-                msgDialog.setNeutralButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                //msgDialog.d
-                            }
-                        });
+                tipDialog.setView(et);
+                tipDialog.setView(et);
+                tipDialog.setNeutralButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        //msgDialog.d
+                    }
+                });
                 break;
             }
             case msg_warning: {
@@ -237,9 +248,9 @@ public class Msgbox {
             }
             case msg_Query:
             {
-                PhoneSound.play(ctx,R.raw.hint_8);
+                PhoneSound.play(ctx,R.raw.hint_1);
                 items.add(new ItemBean(R.drawable.icon_help,message));
-                msgDialog.setNeutralButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                tipDialog.setNeutralButton(android.R.string.no, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         //msgDialog.d
                     }
@@ -254,17 +265,68 @@ public class Msgbox {
         }
         //msgDialog.setMessage(message);
         CustomAdapter adapter=new CustomAdapter(items,ctx);
-        msgDialog.setAdapter(adapter,null);
-        msgDialog.setCancelable(false);
+        tipDialog.setAdapter(adapter,null);
+        tipDialog.setCancelable(false);
 
-        msgDialog.show();
+        tipDialog.show();
+
+
+
+    }
+    public static void Show(final Context ctx, String message,
+                            MsgType msgType, final IAsynListener OKcallback) {
+        Show(ctx,"提示",message,msgType,OKcallback,null);
+    }
+    public static void Show(Context ctx, String title, String message, MsgType msgType) {
+        Show(ctx,title, message,msgType, null,null);
+    }
+    public static void Show(Context ctx, String message) {
+        Show(ctx,"提示" ,message, MsgType.msg_Hint, null,null);
+    }
+
+    public static boolean CloseTipDialog(){
         return true;
     }
-    public static boolean Show(Context ctx, String title,String message,MsgType msgType) {
-        return Show(ctx,title, message,msgType, null);
-    }
-    public static boolean Show(Context ctx, String message) {
 
-        return Show(ctx,ctx.getString(R.string.msgbox_show_hint) ,message,MsgType.msg_Hint, null);
+    public static void hideBottomUIMenu(final Window window) {
+        //隐藏虚拟按键，并且全屏
+        if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
+            View v = window.getDecorView();
+            v.setSystemUiVisibility(View.GONE);
+        } else if (Build.VERSION.SDK_INT >= 19) {
+            //for new api versions.
+            View decorView = window.getDecorView();
+            int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN;
+            decorView.setSystemUiVisibility(uiOptions);
+            decorView.setOnSystemUiVisibilityChangeListener(
+                    new View.OnSystemUiVisibilityChangeListener()
+                    {
+                        @Override
+                        public void onSystemUiVisibilityChange(int visibility)
+                        {
+                            hideBottomUIMenu(window);
+                            //Toast.makeText(MainActivity.this,"隐藏虚拟按钮栏", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+            );
+        }
     }
+    public  static AlertDialog ShowDialog(Context ctx,int resId)
+    {
+        final AlertDialog alertDialog = new AlertDialog.Builder(ctx).create();
+        alertDialog.show();
+        Window window =alertDialog.getWindow();
+        window.setGravity(Gravity.CENTER);
+        window.setContentView(resId);
+        /*hideBottomUIMenu(window);*/
+        WindowManager.LayoutParams params = alertDialog.getWindow().getAttributes();
+        // 去除四角黑色背景
+        window.setBackgroundDrawable(new BitmapDrawable());
+        // 设置周围的暗色系数
+        params.dimAmount = 0.5f;
+        window.setAttributes(params);
+        return alertDialog;
+    }
+
 }

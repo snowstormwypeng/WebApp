@@ -2,9 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/WebApp.iml" filepath="$PROJECT_DIR$/WebApp.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/updateapp/updateapp.iml" filepath="$PROJECT_DIR$/updateapp/updateapp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/WebApp.iml" filepath="$PROJECT_DIR$/WebApp.iml" group="WebApp" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="WebApp/app" />
     </modules>
   </component>
 </project>

@@ -58,12 +58,21 @@ public class MainActivity extends BaseActivity implements IBrushCardEvent {
         jsCall.CallJs("ClearInfo","");
     }
 
+    /**
+     * 检查升级
+     */
+    public void CheckUpdate()
+    {
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);//去掉标题栏
         //this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);//去掉信息栏
         setContentView(R.layout.activity_main);
+        CheckUpdate();
         initWebView();
 
     }

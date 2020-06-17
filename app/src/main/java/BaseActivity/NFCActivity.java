@@ -24,6 +24,7 @@ import Helper.Msgbox;
 import Interface.IAsynCallBackListener;
 import Interface.IBrushCardEvent;
 import Interface.ICard;
+import Listener.IAsynListener;
 
 
 /**
@@ -45,9 +46,9 @@ public class NFCActivity extends AppCompatActivity {
             //判断nfcAdapter是否为空，若为空则手机不支持NFC设备
             if (nfcAdapter == null) {
                 //Toast.makeText(this, "不支持nfc", Toast.LENGTH_SHORT).show();
-                Msgbox.Show(this, "提示", "系统不支持NFC，系统停止。", MsgType.msg_Error, new IAsynCallBackListener() {
+                Msgbox.Show(this, "提示", "系统不支持NFC，系统停止。", MsgType.msg_Error, new IAsynListener() {
                     @Override
-                    public void onFinish(Object response) {
+                    public void onFinish(Object sender, Object response) {
                         finish();
                     }
 
@@ -55,7 +56,7 @@ public class NFCActivity extends AppCompatActivity {
                     public void onError(Object sender, Exception e) {
 
                     }
-                });
+                },null);
                 return 0;
             } else {//若不为空，则判断NFC是否开启
                 if (!nfcAdapter.isEnabled()) {
