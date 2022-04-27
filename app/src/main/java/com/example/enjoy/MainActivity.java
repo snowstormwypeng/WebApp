@@ -5,10 +5,12 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
+import android.webkit.ConsoleMessage;
 import android.webkit.JsResult;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -206,6 +208,7 @@ public class MainActivity extends BaseActivity implements IBrushCardEvent {
         webSettings.setAppCachePath(appCachePath);
         webSettings.setAllowFileAccess(true);
         webSettings.setAppCacheEnabled(true);
+        mWebView.setWebContentsDebuggingEnabled(true);
 
         webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
         webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
@@ -294,6 +297,8 @@ public class MainActivity extends BaseActivity implements IBrushCardEvent {
                 return true;
 
             }
+
+
         });
     }
 }

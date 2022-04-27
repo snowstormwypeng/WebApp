@@ -4,7 +4,8 @@
     <string name="msgbox_show_hint">提示</string>
 
 
-    <string name="loadurl">http://60.205.149.140:600/Polling/Index</string>
+<!--    <string name="loadurl">http://860000001.cashier.yingjiayun.com/?mcode=860000001&amp;code=860311001</string>-->
     <!--<string name="loadurl">http://192.168.0.16:805/Polling/Index</string>-->
+    <string name="loadurl">http://192.168.0.16:8848/test/index.html</string>
     <string name="authorities">EnjoyERPfileprovider</string>
 </resources>
